@@ -109,7 +109,7 @@
     const statusDiv = document.getElementById('status');
 
     // --- GANTI URL INI DENGAN URL WEBHOOK PRODUKSI N8N ANDA ---
-    const N8N_WEBHOOK_URL = 'https://YOUR_N8N_INSTANCE.com/webhook/YOUR_WEBHOOK_ID';
+    const N8N_WEBHOOK_URL = 'https://5678-firebase-n8ntelegram-1758184714970.cluster-xpmcxs2fjnhg6xvn446ubtgpio.cloudworkstations.dev/webhook-test/01b46a33-aca7-4765-85a3-09d5a57e8ff2';
 
     // Fungsi untuk mengirim pesan
     async function sendMessage() {
@@ -137,6 +137,9 @@
             // Kirim data ke n8n
             const response = await fetch(N8N_WEBHOOK_URL, {
                 method: 'POST',
+                headers: {
+                    'X-API-KEY': 'KATA-RAHASIA-SUPER-AMAN-123'
+                },
                 body: formData // Browser akan otomatis set header 'multipart/form-data'
             });
 
