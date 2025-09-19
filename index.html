@@ -83,6 +83,38 @@
             color: #65676b;
             text-align: center;
         }
+
+        /* ... (semua CSS Anda yang sebelumnya) ... */
+
+        /* Gaya untuk gelembung 'sedang mengetik' */
+        .loading-bubble .text {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px; /* Sedikit lebih besar untuk titik-titik */
+        }
+        
+        .loading-bubble .dot {
+            width: 8px;
+            height: 8px;
+            margin: 0 2px;
+            background-color: #90949c;
+            border-radius: 50%;
+            animation: blink 1.4s infinite both;
+        }
+        
+        .loading-bubble .dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .loading-bubble .dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes blink {
+            0% { opacity: 0.2; }
+            20% { opacity: 1; }
+            100% { opacity: 0.2; }
+        }
     </style>
 </head>
 <body>
@@ -107,76 +139,109 @@
     const fileInput = document.getElementById('fileInput');
     const sendButton = document.getElementById('sendButton');
     const statusDiv = document.getElementById('status');
-
+    
     // --- GANTI URL INI DENGAN URL WEBHOOK PRODUKSI N8N ANDA ---
-    const N8N_WEBHOOK_URL = 'https://devDaffas-n8nauto.hf.space/webhook-test/eea94c10-72b3-4a80-a271-63256508ea70'
-    // Fungsi untuk mengirim pesan
+    const N8N_WEBHOOK_URL = 'https://YOUR_N8N_INSTANCE.com/webhook/YOUR_WEBHOOK_ID';
+    
+    // Variabel untuk menyimpan elemen loading bubble
+    let loadingBubbleElement = null;
+    
+    // Fungsi untuk menampilkan indikator loading
+    function showLoadingIndicator() {
+        // Buat elemen utama untuk gelembung pesan
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'message bot-message loading-bubble'; // Tambahkan class baru
+    
+        // Buat elemen untuk teks/konten gelembung
+        const textSpan = document.createElement('span');
+        textSpan.className = 'text';
+    
+        // Buat tiga titik untuk animasi
+        for (let i = 0; i < 3; i++) {
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+            textSpan.appendChild(dot);
+        }
+    
+        messageDiv.appendChild(textSpan);
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    
+        // Simpan referensi ke elemen ini agar bisa kita hapus nanti
+        loadingBubbleElement = messageDiv;
+    }
+    
+    // Fungsi untuk menyembunyikan/menghapus indikator loading
+    function hideLoadingIndicator() {
+        if (loadingBubbleElement) {
+            loadingBubbleElement.remove();
+            loadingBubbleElement = null;
+        }
+    }
+    
+    // Fungsi utama untuk mengirim pesan (sudah dimodifikasi)
     async function sendMessage() {
         const userMessage = userInput.value.trim();
         const userFile = fileInput.files[0];
-
-        // Pesan atau file harus ada
+    
         if (!userMessage && !userFile) {
             alert('Silakan ketik pesan atau pilih file.');
             return;
         }
-        
-        // Tampilkan pesan pengguna di UI
+    
+        // Tampilkan pesan pengguna
         addMessage(userMessage || `File: ${userFile.name}`, 'user');
-        statusDiv.textContent = 'Mengirim...';
-
-        // Buat objek FormData
+        
+        // Kosongkan input dan langsung tampilkan indikator loading
+        userInput.value = '';
+        fileInput.value = '';
+        showLoadingIndicator();
+    
         const formData = new FormData();
         formData.append('message', userMessage);
         if (userFile) {
             formData.append('file', userFile);
         }
-
+    
         try {
-            // Kirim data ke n8n
             const response = await fetch(N8N_WEBHOOK_URL, {
                 method: 'POST',
-                headers: {
-                    'X-API-KEY': 'KATA-RAHASIA-SUPER-AMAN-123'
-                },
-                body: formData // Browser akan otomatis set header 'multipart/form-data'
+                body: formData
             });
-
+    
+            // HAPUS indikator loading SEBELUM menampilkan hasil/error
+            hideLoadingIndicator();
+    
             if (!response.ok) {
                 throw new Error(`HTTP error! Status: ${response.status}`);
             }
-
+    
             const data = await response.json();
             
-            // Tampilkan balasan dari bot (sesuaikan 'reply' dengan key JSON dari n8n)
-            addMessage(data.reply || 'Tidak ada balasan.', 'bot');
+            // Tampilkan jawaban asli dari bot
+            addMessage(data.reply || 'Maaf, saya tidak bisa memberikan jawaban.', 'bot');
             
         } catch (error) {
             console.error('Error:', error);
+            // Pastikan indikator loading juga hilang jika terjadi error
+            hideLoadingIndicator();
             addMessage(`Terjadi kesalahan: ${error.message}`, 'bot');
-        } finally {
-            // Bersihkan input setelah selesai
-            userInput.value = '';
-            fileInput.value = '';
-            statusDiv.textContent = '';
         }
     }
-
-    // Fungsi untuk menambahkan pesan ke chat box
+    
+    // Fungsi untuk menambahkan pesan teks biasa (tidak berubah)
     function addMessage(text, sender) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}-message`;
-        
         const textSpan = document.createElement('span');
         textSpan.className = 'text';
         textSpan.textContent = text;
-        
         messageDiv.appendChild(textSpan);
         chatBox.appendChild(messageDiv);
-        chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll ke bawah
+        chatBox.scrollTop = chatBox.scrollHeight;
     }
-
-    // Tambahkan event listener untuk tombol dan tombol Enter
+    
+    // Event listeners (tidak berubah)
     sendButton.addEventListener('click', sendMessage);
     userInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
