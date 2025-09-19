@@ -186,6 +186,9 @@
         try {
             const response = await fetch(N8N_WEBHOOK_URL, {
                 method: 'POST',
+                headers: {
+                    'X-API-KEY': 'KATA-RAHASIA-SUPER-AMAN-123' 
+                },
                 body: formData
             });
 
