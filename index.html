@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Test Chat Client for n8n</title>
+    <title>AI Data Analyst Client</title>
     <style>
-        /* CSS Sederhana untuk Tampilan Chat */
+        /* CSS Lengkap untuk Tampilan Chat dan Indikator Loading */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f0f2f5;
@@ -18,6 +18,7 @@
         .chat-container {
             width: 500px;
             height: 70vh;
+            min-height: 400px;
             background-color: #fff;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
@@ -45,6 +46,7 @@
             padding: 10px 15px;
             border-radius: 18px;
             max-width: 75%;
+            word-wrap: break-word;
         }
         .bot-message .text {
             background-color: #e4e6eb;
@@ -76,23 +78,14 @@
             height: 40px;
             font-size: 20px;
             cursor: pointer;
+            flex-shrink: 0;
         }
-        #status {
-            padding: 0 20px 10px;
-            font-size: 12px;
-            color: #65676b;
-            text-align: center;
-        }
-
-        /* ... (semua CSS Anda yang sebelumnya) ... */
-
         /* Gaya untuk gelembung 'sedang mengetik' */
         .loading-bubble .text {
             display: flex;
             align-items: center;
-            padding: 12px 15px; /* Sedikit lebih besar untuk titik-titik */
+            padding: 12px 15px;
         }
-        
         .loading-bubble .dot {
             width: 8px;
             height: 8px;
@@ -101,15 +94,12 @@
             border-radius: 50%;
             animation: blink 1.4s infinite both;
         }
-        
         .loading-bubble .dot:nth-child(2) {
             animation-delay: 0.2s;
         }
-        
         .loading-bubble .dot:nth-child(3) {
             animation-delay: 0.4s;
         }
-        
         @keyframes blink {
             0% { opacity: 0.2; }
             20% { opacity: 1; }
@@ -122,10 +112,9 @@
 <div class="chat-container">
     <div class="chat-box" id="chatBox">
         <div class="message bot-message">
-            <span class="text">Halo! Silakan ajukan pertanyaan dan lampirkan file jika perlu.</span>
+            <span class="text">Halo! Saya adalah AI Data Analyst. Silakan ajukan pertanyaan dan lampirkan file data (CSV, Excel, dll) jika perlu.</span>
         </div>
     </div>
-    <div id="status"></div>
     <div class="input-area">
         <input type="file" id="fileInput">
         <input type="text" id="userInput" placeholder="Ketik pesan Anda...">
@@ -138,39 +127,32 @@
     const userInput = document.getElementById('userInput');
     const fileInput = document.getElementById('fileInput');
     const sendButton = document.getElementById('sendButton');
-    const statusDiv = document.getElementById('status');
-    
-    // --- GANTI URL INI DENGAN URL WEBHOOK PRODUKSI N8N ANDA ---
-    const N8N_WEBHOOK_URL = 'https://YOUR_N8N_INSTANCE.com/webhook/YOUR_WEBHOOK_ID';
-    
+
+    // --- (PENTING) GANTI URL INI DENGAN URL WEBHOOK PRODUKSI N8N ANDA ---
+    const N8N_WEBHOOK_URL = 'https://devDaffas-n8nauto.hf.space/webhook-test/eea94c10-72b3-4a80-a271-63256508ea70';
+
     // Variabel untuk menyimpan elemen loading bubble
     let loadingBubbleElement = null;
-    
+
     // Fungsi untuk menampilkan indikator loading
     function showLoadingIndicator() {
-        // Buat elemen utama untuk gelembung pesan
         const messageDiv = document.createElement('div');
-        messageDiv.className = 'message bot-message loading-bubble'; // Tambahkan class baru
-    
-        // Buat elemen untuk teks/konten gelembung
+        messageDiv.className = 'message bot-message loading-bubble';
         const textSpan = document.createElement('span');
         textSpan.className = 'text';
-    
-        // Buat tiga titik untuk animasi
+
         for (let i = 0; i < 3; i++) {
             const dot = document.createElement('span');
             dot.className = 'dot';
             textSpan.appendChild(dot);
         }
-    
+
         messageDiv.appendChild(textSpan);
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
-    
-        // Simpan referensi ke elemen ini agar bisa kita hapus nanti
         loadingBubbleElement = messageDiv;
     }
-    
+
     // Fungsi untuk menyembunyikan/menghapus indikator loading
     function hideLoadingIndicator() {
         if (loadingBubbleElement) {
@@ -178,58 +160,55 @@
             loadingBubbleElement = null;
         }
     }
-    
-    // Fungsi utama untuk mengirim pesan (sudah dimodifikasi)
+
+    // Fungsi utama untuk mengirim pesan
     async function sendMessage() {
         const userMessage = userInput.value.trim();
         const userFile = fileInput.files[0];
-    
+
         if (!userMessage && !userFile) {
             alert('Silakan ketik pesan atau pilih file.');
             return;
         }
-    
-        // Tampilkan pesan pengguna
+
         addMessage(userMessage || `File: ${userFile.name}`, 'user');
         
-        // Kosongkan input dan langsung tampilkan indikator loading
         userInput.value = '';
         fileInput.value = '';
         showLoadingIndicator();
-    
+
         const formData = new FormData();
         formData.append('message', userMessage);
         if (userFile) {
             formData.append('file', userFile);
         }
-    
+
         try {
             const response = await fetch(N8N_WEBHOOK_URL, {
                 method: 'POST',
                 body: formData
             });
-    
-            // HAPUS indikator loading SEBELUM menampilkan hasil/error
+
             hideLoadingIndicator();
-    
+
             if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
+                // Mencoba membaca pesan error dari server jika ada
+                const errorData = await response.json().catch(() => null);
+                const errorMessage = errorData?.message || `HTTP error! Status: ${response.status}`;
+                throw new Error(errorMessage);
             }
-    
+
             const data = await response.json();
-            
-            // Tampilkan jawaban asli dari bot
-            addMessage(data.reply || 'Maaf, saya tidak bisa memberikan jawaban.', 'bot');
+            addMessage(data.reply || 'Maaf, saya tidak menerima balasan yang valid.', 'bot');
             
         } catch (error) {
             console.error('Error:', error);
-            // Pastikan indikator loading juga hilang jika terjadi error
             hideLoadingIndicator();
             addMessage(`Terjadi kesalahan: ${error.message}`, 'bot');
         }
     }
-    
-    // Fungsi untuk menambahkan pesan teks biasa (tidak berubah)
+
+    // Fungsi untuk menambahkan pesan teks biasa ke chat box
     function addMessage(text, sender) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}-message`;
@@ -240,8 +219,8 @@
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
     }
-    
-    // Event listeners (tidak berubah)
+
+    // Event listeners
     sendButton.addEventListener('click', sendMessage);
     userInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
