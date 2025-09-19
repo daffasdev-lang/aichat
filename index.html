@@ -128,32 +128,29 @@
     const fileInput = document.getElementById('fileInput');
     const sendButton = document.getElementById('sendButton');
 
-    // --- (PENTING) GANTI URL INI DENGAN URL WEBHOOK PRODUKSI N8N ANDA ---
+    // --- PENGATURAN PENTING ---
     const N8N_WEBHOOK_URL = 'https://devDaffas-n8nauto.hf.space/webhook-test/eea94c10-72b3-4a80-a271-63256508ea70';
+    const API_KEY = 'KATA-RAHASIA-SUPER-AMAN-123'; // Ganti jika Anda pakai Header Auth, kosongkan jika tidak
+    // -------------------------
 
-    // Variabel untuk menyimpan elemen loading bubble
     let loadingBubbleElement = null;
 
-    // Fungsi untuk menampilkan indikator loading
     function showLoadingIndicator() {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message bot-message loading-bubble';
         const textSpan = document.createElement('span');
         textSpan.className = 'text';
-
         for (let i = 0; i < 3; i++) {
             const dot = document.createElement('span');
             dot.className = 'dot';
             textSpan.appendChild(dot);
         }
-
         messageDiv.appendChild(textSpan);
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
         loadingBubbleElement = messageDiv;
     }
 
-    // Fungsi untuk menyembunyikan/menghapus indikator loading
     function hideLoadingIndicator() {
         if (loadingBubbleElement) {
             loadingBubbleElement.remove();
@@ -161,7 +158,6 @@
         }
     }
 
-    // Fungsi utama untuk mengirim pesan
     async function sendMessage() {
         const userMessage = userInput.value.trim();
         const userFile = fileInput.files[0];
@@ -172,7 +168,6 @@
         }
 
         addMessage(userMessage || `File: ${userFile.name}`, 'user');
-        
         userInput.value = '';
         fileInput.value = '';
         showLoadingIndicator();
@@ -184,25 +179,34 @@
         }
 
         try {
-            const response = await fetch(N8N_WEBHOOK_URL, {
+            const fetchOptions = {
                 method: 'POST',
-                headers: {
-                    'X-API-KEY': 'KATA-RAHASIA-SUPER-AMAN-123' 
-                },
-                body: formData
-            });
+                body: formData,
+                headers: {}
+            };
+
+            // Tambahkan header otentikasi jika API_KEY diisi
+            if (API_KEY) {
+                fetchOptions.headers['X-API-KEY'] = API_KEY;
+            }
+
+            const response = await fetch(N8N_WEBHOOK_URL, fetchOptions);
 
             hideLoadingIndicator();
 
             if (!response.ok) {
-                // Mencoba membaca pesan error dari server jika ada
                 const errorData = await response.json().catch(() => null);
                 const errorMessage = errorData?.message || `HTTP error! Status: ${response.status}`;
                 throw new Error(errorMessage);
             }
 
             const data = await response.json();
-            addMessage(data.reply || 'Maaf, saya tidak menerima balasan yang valid.', 'bot');
+            
+            // Ini adalah baris yang kita diskusikan. 
+            // Ia mencari 'reply' di dalam JSON, atau menampilkan pesan cadangan.
+            const botReply = data.reply || 'Maaf, saya tidak menerima balasan yang valid.';
+
+            addMessage(botReply, 'bot');
             
         } catch (error) {
             console.error('Error:', error);
@@ -211,7 +215,6 @@
         }
     }
 
-    // Fungsi untuk menambahkan pesan teks biasa ke chat box
     function addMessage(text, sender) {
         const messageDiv = document.createElement('div');
         messageDiv.className = `message ${sender}-message`;
@@ -223,7 +226,6 @@
         chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    // Event listeners
     sendButton.addEventListener('click', sendMessage);
     userInput.addEventListener('keypress', (event) => {
         if (event.key === 'Enter') {
