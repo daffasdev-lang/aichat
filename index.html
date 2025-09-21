@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Data Analyst Client</title>
     <style>
-        /* CSS Lengkap untuk Tampilan Chat dan Indikator Loading */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f0f2f5;
@@ -14,10 +13,12 @@
             align-items: center;
             height: 100vh;
             margin: 0;
+            color: #050505;
         }
         .chat-container {
-            width: 500px;
-            height: 70vh;
+            width: 90%;
+            max-width: 600px;
+            height: 80vh;
             min-height: 400px;
             background-color: #fff;
             border-radius: 8px;
@@ -45,12 +46,12 @@
         .message .text {
             padding: 10px 15px;
             border-radius: 18px;
-            max-width: 75%;
+            max-width: 80%;
             word-wrap: break-word;
+            line-height: 1.4;
         }
         .bot-message .text {
             background-color: #e4e6eb;
-            color: #050505;
         }
         .user-message .text {
             background-color: #0084ff;
@@ -61,12 +62,13 @@
             display: flex;
             gap: 10px;
             align-items: center;
+            border-top: 1px solid #ddd;
         }
         #userInput {
             flex-grow: 1;
             border: 1px solid #ccc;
             border-radius: 20px;
-            padding: 10px;
+            padding: 10px 15px;
             font-size: 16px;
         }
         #sendButton {
@@ -79,8 +81,11 @@
             font-size: 20px;
             cursor: pointer;
             flex-shrink: 0;
+            transition: background-color 0.2s;
         }
-        /* Gaya untuk gelembung 'sedang mengetik' */
+        #sendButton:hover {
+            background-color: #0073e0;
+        }
         .loading-bubble .text {
             display: flex;
             align-items: center;
@@ -94,12 +99,8 @@
             border-radius: 50%;
             animation: blink 1.4s infinite both;
         }
-        .loading-bubble .dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-        .loading-bubble .dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
+        .loading-bubble .dot:nth-child(2) { animation-delay: 0.2s; }
+        .loading-bubble .dot:nth-child(3) { animation-delay: 0.4s; }
         @keyframes blink {
             0% { opacity: 0.2; }
             20% { opacity: 1; }
@@ -112,30 +113,30 @@
 <div class="chat-container">
     <div class="chat-box" id="chatBox">
         <div class="message bot-message">
-            <span class="text">Halo! Saya adalah AI Data Analyst. Silakan ajukan pertanyaan dan lampirkan file data (CSV, Excel, dll) jika perlu.</span>
+            <span class="text">Halo! Saya adalah AI Data Analyst. Silakan ajukan pertanyaan dan lampirkan file data jika perlu.</span>
         </div>
     </div>
     <div class="input-area">
         <input type="file" id="fileInput">
         <input type="text" id="userInput" placeholder="Ketik pesan Anda...">
-        <button id="sendButton">➤</button>
+        <button id="sendButton" title="Kirim Pesan">➤</button>
     </div>
 </div>
 
 <script>
+    // --- KONFIGURASI WAJIB ---
+    const N8N_WEBHOOK_URL = 'https://devDaffas-n8nauto.hf.space/webhook-test/aichatmain';
+    const API_KEY = ''; // Kosongkan jika auth di n8n = None
+    // -------------------------
+
     const chatBox = document.getElementById('chatBox');
     const userInput = document.getElementById('userInput');
     const fileInput = document.getElementById('fileInput');
     const sendButton = document.getElementById('sendButton');
 
-    // --- PENGATURAN PENTING ---
-    const N8N_WEBHOOK_URL = 'https://devDaffas-n8nauto.hf.space/webhook-test/aichatmain';
-    const API_KEY = 'KATA-RAHASIA-SUPER-AMAN-123'; // Ganti jika Anda pakai Header Auth, kosongkan jika tidak
-    // -------------------------
-
     let loadingBubbleElement = null;
 
-    function showLoadingIndicator() {
+    const showLoadingIndicator = () => {
         const messageDiv = document.createElement('div');
         messageDiv.className = 'message bot-message loading-bubble';
         const textSpan = document.createElement('span');
@@ -149,23 +150,31 @@
         chatBox.appendChild(messageDiv);
         chatBox.scrollTop = chatBox.scrollHeight;
         loadingBubbleElement = messageDiv;
-    }
+    };
 
-    function hideLoadingIndicator() {
+    const hideLoadingIndicator = () => {
         if (loadingBubbleElement) {
             loadingBubbleElement.remove();
             loadingBubbleElement = null;
         }
-    }
+    };
 
-    async function sendMessage() {
+    const addMessage = (text, sender) => {
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message ${sender}-message`;
+        const textSpan = document.createElement('span');
+        textSpan.className = 'text';
+        textSpan.textContent = text;
+        messageDiv.appendChild(textSpan);
+        chatBox.appendChild(messageDiv);
+        chatBox.scrollTop = chatBox.scrollHeight;
+    };
+
+    const sendMessage = async () => {
         const userMessage = userInput.value.trim();
         const userFile = fileInput.files[0];
 
-        if (!userMessage && !userFile) {
-            alert('Silakan ketik pesan atau pilih file.');
-            return;
-        }
+        if (!userMessage && !userFile) return;
 
         addMessage(userMessage || `File: ${userFile.name}`, 'user');
         userInput.value = '';
@@ -174,18 +183,15 @@
 
         const formData = new FormData();
         formData.append('message', userMessage);
-        if (userFile) {
-            formData.append('file', userFile);
-        }
+        if (userFile) formData.append('file', userFile);
 
         try {
             const fetchOptions = {
                 method: 'POST',
                 body: formData,
-                headers: {}
+                headers: {},
             };
 
-            // Tambahkan header otentikasi jika API_KEY diisi
             if (API_KEY) {
                 fetchOptions.headers['X-API-KEY'] = API_KEY;
             }
@@ -195,43 +201,25 @@
             hideLoadingIndicator();
 
             if (!response.ok) {
-                const errorData = await response.json().catch(() => null);
-                const errorMessage = errorData?.message || `HTTP error! Status: ${response.status}`;
-                throw new Error(errorMessage);
+                throw new Error(`HTTP error! Status: ${response.status}`);
             }
 
             const data = await response.json();
-            
-            // Ini adalah baris yang kita diskusikan. 
-            // Ia mencari 'reply' di dalam JSON, atau menampilkan pesan cadangan.
             const botReply = data.reply || 'Maaf, saya tidak menerima balasan yang valid.';
-
             addMessage(botReply, 'bot');
-            
+
         } catch (error) {
             console.error('Error:', error);
             hideLoadingIndicator();
             addMessage(`Terjadi kesalahan: ${error.message}`, 'bot');
         }
-    }
-
-    function addMessage(text, sender) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${sender}-message`;
-        const textSpan = document.createElement('span');
-        textSpan.className = 'text';
-        textSpan.textContent = text;
-        messageDiv.appendChild(textSpan);
-        chatBox.appendChild(messageDiv);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
+    };
 
     sendButton.addEventListener('click', sendMessage);
     userInput.addEventListener('keypress', (event) => {
-        if (event.key === 'Enter') {
-            sendMessage();
-        }
+        if (event.key === 'Enter') sendMessage();
     });
+
 </script>
 
 </body>
